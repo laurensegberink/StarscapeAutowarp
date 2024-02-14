@@ -1,14 +1,63 @@
+# sasware autowarp
+# v1.1
+
 import pyautogui
 import time
-import sys
 import threading
 import keyboard
+from notifypy import Notify
+import colorama
+from colorama import Fore
 from ahk import AHK
 
-ahk = AHK(executable_path="AutoHotkeyU64.exe")
+start_exit = False
+
+RED = Fore.RED
+GREEN = Fore.GREEN
+YELLOW = Fore.YELLOW
+BLUE = Fore.BLUE
+MAGENTA = Fore.MAGENTA
+CYAN = Fore.CYAN
+RESET = Fore.RESET
+
+class Output: # definitely not pasted from my other project
+    def Error(message : str):
+        print(RED + "ERROR > " + message + colorama.Style.RESET_ALL)
+    def Info(message : str):
+        print(BLUE + "INFO > " + message + colorama.Style.RESET_ALL)
+    def Success(message : str):
+        print(GREEN + "SUCCESS > " + message + colorama.Style.RESET_ALL)
+
+def Exit(Full : bool = False):
+    global start_exit
+
+    start_exit = True
+    text_thread.join()
+
+    if Full:
+        print("Exiting...")
+        exit()
+
+    input("Press enter to exit...")
+    exit()
+
+try:
+    ahk = AHK(executable_path = "AutoHotkeyU64.exe")
+except:
+    Output.Error(
+        """AutoHotkeyU64.exe not found in same folder as script.
+        Please download it from https://www.autohotkey.com/download/ahk.zip and place it in the same folder as this script."""
+    )
+    Exit()
 
 current_text = "Waiting for Roblox to be active"
 current_screen_dimensions = pyautogui.size()
+
+def notify(title, message):
+    notification = Notify()
+    notification.title = title
+    notification.message = message
+    notification.send()
 
 def is_image_on_screen(image):
     try:
@@ -35,10 +84,15 @@ def warp():
     time.sleep(0.5)
 
     # Find position of the warp button (Destination.png)
-    positions = pyautogui.locateAllOnScreen('Destination.png', confidence=0.9)
-    if positions == None:
-        print("Destination not found")
-        sys.exit(1)
+    try:
+        positions = pyautogui.locateAllOnScreen('Destination.png', confidence=0.9)
+    except:
+        notify("AutoWarp", "Destination reached!")
+        exit()
+    finally: # Possibly redundant?
+        if positions == None:
+            print("Destination not found")
+            Exit(True)
 
     # Go through all positions and find the one that has the star color
     position = None
@@ -48,6 +102,10 @@ def warp():
         if 70 > color[2] > 55:
             position = pos
             break
+
+    if position == None:
+        print("Destination not found")
+        Exit(True)
 
     current_text = "Finding destination..."
     
@@ -63,11 +121,8 @@ def warp():
         brightness = new_brightness
 
     ahk.run_script("Send, {Space Up}")
+    notify("AutoWarp", "Attempting to warp...")
     current_text = "Attempting to warp..."
-    # If X is pressed in the next 3 seconds, close the program
-    hotkeyobject = keyboard.add_hotkey('x', lambda: sys.exit(0))
-    time.sleep(3)
-    keyboard.remove_hotkey(hotkeyobject)
 
     # Wait for Warping.png to show and then wait for it to disappear
     while not is_image_on_screen('Warping.png'):
@@ -76,7 +131,14 @@ def warp():
     while is_image_on_screen('Warping.png'):
         time.sleep(0.5)
 
-print("Waiting for Roblox to be active")
+print("[!] Waiting for Roblox to be active")
+notify("AutoWarp", "Waiting for Roblox to be active")
+
+if not ahk.find_window_by_title("Roblox"):
+    print("Roblox is not open")
+    Exit()
+
+keyboard.add_hotkey('F6', Exit, args=[True])
 
 while True:
     if ahk.find_window_by_title("Roblox") == ahk.get_active_window():
@@ -87,19 +149,24 @@ import oGUI
 top_text = oGUI.Text(oGUI.white, int(current_screen_dimensions[0] / 2), 50, 19, current_text)
 
 def update_text():
+    global start_exit
     while True:
+        if start_exit:
+            break
         oGUI.startLoop()
-        top_text.x = int(current_screen_dimensions[0] / 2) - (len(current_text) * 6)
+        top_text.x = int(current_screen_dimensions[0] / 2) - (len(current_text) * 6) + 100
         top_text.textStr = current_text
         top_text.draw()
         oGUI.endLoop()
-        time.sleep(1/20)
+        time.sleep(1/10)
 
 oGUI.init()
-threading.Thread(target=update_text).start()
+text_thread = threading.Thread(target=update_text)
+text_thread.start()
 
 # Focus on Roblox
 ahk.run_script("WinActivate, Roblox")
+current_text = "Waiting for ship to be stationary..."
 
 while True:
 
