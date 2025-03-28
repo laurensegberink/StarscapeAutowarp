@@ -52,6 +52,8 @@ except:
 
 current_text = "Waiting for Roblox to be active"
 current_screen_dimensions = pyautogui.size()
+current_status = "Waiting for ship to be stationary..."
+warp_progress = 0
 
 def notify(title, message):
     notification = Notify()
@@ -77,7 +79,7 @@ def get_brightness(position):
     return sum(color) / 3
 
 def warp():
-    global current_text
+    global current_text, current_status, warp_progress
     ahk.run_script("Send, {Space Up}")
     ahk.run_script("Send, {Space Down}")
 
@@ -108,6 +110,7 @@ def warp():
         Exit(True)
 
     current_text = "Finding destination..."
+    current_status = "Finding destination..."
     
     # Move mouse down until the brightness of the center pixel increases
     center = get_center(position)
@@ -123,13 +126,17 @@ def warp():
     ahk.run_script("Send, {Space Up}")
     notify("AutoWarp", "Attempting to warp...")
     current_text = "Attempting to warp..."
+    current_status = "Attempting to warp..."
 
     # Wait for Warping.png to show and then wait for it to disappear
     while not is_image_on_screen('Warping.png'):
         time.sleep(0.5)
     current_text = "Waiting for warp to finish..."
+    current_status = "Warping"
+    warp_progress = 0
     while is_image_on_screen('Warping.png'):
         time.sleep(0.5)
+        warp_progress += 1
 
 print("[!] Waiting for Roblox to be active")
 notify("AutoWarp", "Waiting for Roblox to be active")
@@ -147,6 +154,9 @@ while True:
 import oGUI
 
 top_text = oGUI.Text(oGUI.white, int(current_screen_dimensions[0] / 2), 50, 19, current_text)
+status_text = oGUI.Text(oGUI.white, int(current_screen_dimensions[0] / 2), 100, 19, current_status)
+screen_dimensions_text = oGUI.Text(oGUI.white, int(current_screen_dimensions[0] / 2), 150, 19, f"Screen Dimensions: {current_screen_dimensions[0]}x{current_screen_dimensions[1]}")
+progress_bar = oGUI.Rect(oGUI.green, int(current_screen_dimensions[0] / 2) - 100, 200, warp_progress, 20)
 
 def update_text():
     global start_exit
@@ -157,6 +167,14 @@ def update_text():
         top_text.x = int(current_screen_dimensions[0] / 2) - (len(current_text) * 6) + 100
         top_text.textStr = current_text
         top_text.draw()
+        status_text.x = int(current_screen_dimensions[0] / 2) - (len(current_status) * 6) + 100
+        status_text.textStr = current_status
+        status_text.draw()
+        screen_dimensions_text.x = int(current_screen_dimensions[0] / 2) - (len(f"Screen Dimensions: {current_screen_dimensions[0]}x{current_screen_dimensions[1]}") * 6) + 100
+        screen_dimensions_text.textStr = f"Screen Dimensions: {current_screen_dimensions[0]}x{current_screen_dimensions[1]}"
+        screen_dimensions_text.draw()
+        progress_bar.width = warp_progress
+        progress_bar.draw()
         oGUI.endLoop()
         time.sleep(1/10)
 
@@ -167,6 +185,7 @@ text_thread.start()
 # Focus on Roblox
 ahk.run_script("WinActivate, Roblox")
 current_text = "Waiting for ship to be stationary..."
+current_status = "Waiting for ship to be stationary..."
 
 while True:
 
@@ -178,5 +197,7 @@ while True:
         print("Warped")
         print("Waiting to warp...")
         current_text = "Waiting for next warp..."
+        current_status = "Waiting for next warp..."
+        warp_progress = 0
         while not can_warp():
             time.sleep(0.5)
