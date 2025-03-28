@@ -6,8 +6,6 @@ import time
 import threading
 import keyboard
 from notifypy import Notify
-import colorama
-from colorama import Fore
 from ahk import AHK
 
 start_exit = False
